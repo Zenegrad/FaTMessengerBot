@@ -10,7 +10,6 @@ var regexPattern = /(~\S+).(\S+).(.*)/;
 if(client.guilds)
 client.on('ready', () => {
     console.log("Connected as " + client.user.tag);
-    //console.log(client.guilds.tap(roles => console.log(roles.id)))
 });
 
 
@@ -33,10 +32,10 @@ client.on('message', (receivedMessage) => {
       console.log(messageArguments);
       console.log("first arg: ", messageArguments[1]);
       //call the right heckin method
-      if(messageArguments[1] == "~dm " || messageArguments[1] == "~dm"){
+      if(messageArguments[1].toLowerCase() == "~dm " || messageArguments[1].toLowerCase() == "~dm"){
         dmCommand(receivedMessage);
       }
-      else if(receivedMessage.content.substring(0, 14) == "~assignChannel"){
+      else if(receivedMessage.content.substring(0, 14).toLowerCase() == "~assignchannel"){
         assignChannel(receivedMessage);
       }
       else{
@@ -46,7 +45,7 @@ client.on('message', (receivedMessage) => {
   }
 });
 
-//Finds the role ID from a mention/ping
+//Returns the role ID from a mention/ping
 function getIdFromMention(mention){
 
   //Role parse.
@@ -62,6 +61,7 @@ function getIdFromMention(mention){
   return null;
 }
 
+//Returns ID of pinged channels
 function getChannelId(mention){
   
   if(mention.startsWith('<#') && mention.endsWith('>')){
@@ -77,12 +77,11 @@ function dmCommand(receivedMessage){
 
   console.log(messageArguments[0]);
   //DM Command
-  if(messageArguments[1] === "~dm"){
+  if(messageArguments[1].toLowerCase() === "~dm"){
     
-    console.log("this ran: ", messageArguments.length);
     //makes sure the command has correct number of args
     if(messageArguments.length-2 === 3){
-      console.log("this ran");
+
       //gets the @roles ready for parsing
       let rolesListed = messageArguments[2].trim().split(" ");
       
@@ -122,11 +121,12 @@ function dmCommand(receivedMessage){
 
 function assignChannel(receivedMessage){
   var channelArray;
-  var newChannelName;
+  var pingedChannel;
   var channelCount = 0;
   let messageArguments = receivedMessage.content.split(" ");
+ 
   //checks prefixs
-  if(messageArguments[0] == "~assignChannel"){
+  if(messageArguments[0].toLowerCase() == "~assignchannel"){
     console.log("message args: " , messageArguments.length);
     switch(messageArguments.length){
       case 1: 
@@ -135,7 +135,7 @@ function assignChannel(receivedMessage){
       
       //If assignChannel command has a second paramater get the channel
       case 2: 
-        newChannelName = getChannelId(messageArguments[1]);
+        pingedChannel = getChannelId(messageArguments[1]);
         
         try{
           channelArray = receivedMessage.guild.channels;
@@ -143,20 +143,15 @@ function assignChannel(receivedMessage){
           console.log(error);
         }
 
-        //Gets the amount of text channels in chat.
+        //Gets all channels and looks for only text channels and which channel has the same ID as the pinged channed in recievedMessage.
         channelArray.forEach(TextChannel => {
           if(TextChannel.type == 'text'){
-            console.log(TextChannel);
-            if(TextChannel.id == newChannelName)
+            if(TextChannel.id == pingedChannel)
             assignedChannel = TextChannel;
-            channelCount++;
-            console.log(channelCount);
           }
-          
         });
         break;
     }
-    console.log("can u not pls", assignedChannel);
     receivedMessage.channel.send("Assigned " + assignedChannel.name + " for all future bot commands.");
   }
 }
@@ -164,6 +159,6 @@ function assignChannel(receivedMessage){
 // Get your bot's secret token from:
 // https://discordapp.com/developers/applications/
 // Click on your application -> Bot -> Token -> "Click to Reveal Token"
-const bot_secret_token = "NjEyMTM5MTI2NjUyOTI4MDE3.XX_TVA.jfIYEBF1rWWHfP0NTsVxx_MBDcY";
+const bot_secret_token = "";
 
 client.login(bot_secret_token);
