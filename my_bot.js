@@ -1,8 +1,11 @@
+//Written by Zenegrad / Kyle Murphy
+//9-25-2019 last updated
+
 const Discord = require('discord.js');
 const client = new Discord.Client();
 
 var assignedChannel;
-var regexPattern = new RegExp('(~\S+).(\S+).(.*)');
+var regexPattern = /(~\S+).(\S+).(.*)/;
 
 if(client.guilds)
 client.on('ready', () => {
@@ -13,26 +16,33 @@ client.on('ready', () => {
 
 //Calls this function when a message is sent on discord
 client.on('message', (receivedMessage) => {
+
   //Switch this to regex so it finds the key words.
-  var messageArguments = receivedMessage.content.split("|");
+  let messageArguments = receivedMessage.content.match(regexPattern);
 
   // Prevent bot from responding to its own messages
   if (receivedMessage.author == client.user) {
     return;
   }
   
-  //Checks to make sure the message is sent in the assigned channel.
-  if(receivedMessage.channel.id == assignedChannel || assignedChannel == null){  
-    switch(messageArguments[0]){
-      case "~dm":
-      case "~dm ":
-        dmCommand(receivedMessage);
-        break;
+  //Checks to make sure the message is sent in the assigned channel. (If there is one).
+  if(receivedMessage.channel == assignedChannel || assignedChannel == null){
 
-      case "~assignChannel":
+    //Checks to make sure the message is actually a command so the bot doesnt break for reg messages. 
+    if(receivedMessage.content.charAt(0) == "~"){
+      console.log(messageArguments);
+      console.log("first arg: ", messageArguments[1]);
+      //call the right heckin method
+      if(messageArguments[1] == "~dm " || messageArguments[1] == "~dm"){
+        dmCommand(receivedMessage);
+      }
+      else if(receivedMessage.content.substring(0, 14) == "~assignChannel"){
         assignChannel(receivedMessage);
-        break;
-    }
+      }
+      else{
+        console.log("Invalid input: ", messageArguments[0]);
+      }
+    } 
   }
 });
 
@@ -52,20 +62,29 @@ function getIdFromMention(mention){
   return null;
 }
 
+function getChannelId(mention){
+  
+  if(mention.startsWith('<#') && mention.endsWith('>')){
+    mention = mention.slice(2,-1);
+    return mention;
+  }
+
+  return null;
+}
 //Function that handles ~dm command (sends a DM to all members involved)
 function dmCommand(receivedMessage){
-  
   var messageArguments = receivedMessage.content.split(regexPattern);
 
+  console.log(messageArguments[0]);
   //DM Command
-  if(messageArguments.group(0) === "~dm"){
-        
+  if(messageArguments[1] === "~dm"){
+    
+    console.log("this ran: ", messageArguments.length);
     //makes sure the command has correct number of args
-    if(len(messageArguments.groups()) === 3){
-
-      console.log("Recieved command");
+    if(messageArguments.length-2 === 3){
+      console.log("this ran");
       //gets the @roles ready for parsing
-      let rolesListed = messageArguments.group(1).trim().split(" ");
+      let rolesListed = messageArguments[2].trim().split(" ");
       
       //User[] of all the users with the role
       let membersWithRole;
@@ -76,7 +95,6 @@ function dmCommand(receivedMessage){
         for(var i = 0; i < rolesListed.length; i++){
           try{
             membersWithRole = receivedMessage.guild.roles.get(getIdFromMention(rolesListed[i])).members.map(m=>m.user);
-
           }catch(error){
             console.error(error);
           }
@@ -87,7 +105,7 @@ function dmCommand(receivedMessage){
           let username = membersWithRole[i].username;
 
           
-          membersWithRole[i].send(messageArguments.group(2)).catch(error => {
+          membersWithRole[i].send(messageArguments[3]).catch(error => {
             if(error.code === 50007){
               receivedMessage.channel.send(username + " has blocked the bot.");
             }
@@ -103,14 +121,49 @@ function dmCommand(receivedMessage){
 }
 
 function assignChannel(receivedMessage){
-  
-  //Figure out fucking regex properly.
-  receivedMessage.split(" ");
+  var channelArray;
+  var newChannelName;
+  var channelCount = 0;
+  let messageArguments = receivedMessage.content.split(" ");
+  //checks prefixs
+  if(messageArguments[0] == "~assignChannel"){
+    console.log("message args: " , messageArguments.length);
+    switch(messageArguments.length){
+      case 1: 
+        assignedChannel = receivedMessage.channel;
+        break;
+      
+      //If assignChannel command has a second paramater get the channel
+      case 2: 
+        newChannelName = getChannelId(messageArguments[1]);
+        
+        try{
+          channelArray = receivedMessage.guild.channels;
+        }catch(error){
+          console.log(error);
+        }
+
+        //Gets the amount of text channels in chat.
+        channelArray.forEach(TextChannel => {
+          if(TextChannel.type == 'text'){
+            console.log(TextChannel);
+            if(TextChannel.id == newChannelName)
+            assignedChannel = TextChannel;
+            channelCount++;
+            console.log(channelCount);
+          }
+          
+        });
+        break;
+    }
+    console.log("can u not pls", assignedChannel);
+    receivedMessage.channel.send("Assigned " + assignedChannel.name + " for all future bot commands.");
+  }
 }
 
 // Get your bot's secret token from:
 // https://discordapp.com/developers/applications/
 // Click on your application -> Bot -> Token -> "Click to Reveal Token"
-const bot_secret_token = "NjEyMTM5MTI2NjUyOTI4MDE3.XXnX2g.KGkpEwowRHHg4H874feqOQZEQqw";
+const bot_secret_token = "NjEyMTM5MTI2NjUyOTI4MDE3.XX_TVA.jfIYEBF1rWWHfP0NTsVxx_MBDcY";
 
 client.login(bot_secret_token);
