@@ -26,22 +26,28 @@ client.on('message', (receivedMessage) => {
   
   //Checks to make sure the message is sent in the assigned channel. (If there is one).
   if(receivedMessage.channel == assignedChannel || assignedChannel == null){
+    try{
+      //Checks to make sure the message is actually a command so the bot doesnt break for reg messages. 
+      if(receivedMessage.content.charAt(0) == "~"){
+        console.log(messageArguments);
+        console.log("first arg: ", messageArguments[1]);
+        //call the right heckin method
+        if(messageArguments[1].toLowerCase() == "~dm " || messageArguments[1].toLowerCase() == "~dm"){
+          dmCommand(receivedMessage);
+        }
+        else if(receivedMessage.content.substring(0, 14).toLowerCase() == "~assignchannel"){
+          assignChannel(receivedMessage);
+        }
+        else{
+          console.log("Invalid input: ", messageArguments[0]);
+        }
+      } 
+    }
+    catch(error){
+      console.log("Some noob put a space between ~ and dm....");
+      receivedMessage.channel.send("Somethings not right... make sure you used the correct command format! ``~dm  @role  message``");
 
-    //Checks to make sure the message is actually a command so the bot doesnt break for reg messages. 
-    if(receivedMessage.content.charAt(0) == "~"){
-      console.log(messageArguments);
-      console.log("first arg: ", messageArguments[1]);
-      //call the right heckin method
-      if(messageArguments[1].toLowerCase() == "~dm " || messageArguments[1].toLowerCase() == "~dm"){
-        dmCommand(receivedMessage);
-      }
-      else if(receivedMessage.content.substring(0, 14).toLowerCase() == "~assignchannel"){
-        assignChannel(receivedMessage);
-      }
-      else{
-        console.log("Invalid input: ", messageArguments[0]);
-      }
-    } 
+    }
   }
 });
 
@@ -73,27 +79,39 @@ function getChannelId(mention){
 }
 //Function that handles ~dm command (sends a DM to all members involved)
 function dmCommand(receivedMessage){
-  var messageArguments = receivedMessage.content.split(regexPattern);
+  var messageArguments = receivedMessage.content.split(" ");
+  var rolesListed = [];
+  var message = "";
 
   console.log(messageArguments[0]);
   //DM Command
-  if(messageArguments[1].toLowerCase() === "~dm"){
+  if(messageArguments[0].toLowerCase() === "~dm"){
     
     //makes sure the command has correct number of args
-    if(messageArguments.length-2 === 3){
+    if(messageArguments.length >= 3){
 
       //gets the @roles ready for parsing
-      let rolesListed = messageArguments[2].trim().split(" ");
+      for(var index = 0; index < messageArguments.length; index++){
+
+        if(messageArguments[index].startsWith('<@&')){
+          rolesListed.push(messageArguments[index]);
+          console.log("Roles listed: ", rolesListed);
+        }
+        //If it isnt a role and isnt the first command (~dm) then it has to be part of the message.
+        else if(index >= 2 && !messageArguments[index].startsWith('<@')){
+          message += messageArguments[index] + ' ';
+        }
+      }
       
       //User[] of all the users with the role
-      let membersWithRole;
+      var membersWithRole = [];
 
       //Doesnt kill the bot if it hits an error.
       try{
         //Finds all users with the roles pinged.
         for(var i = 0; i < rolesListed.length; i++){
           try{
-            membersWithRole = receivedMessage.guild.roles.get(getIdFromMention(rolesListed[i])).members.map(m=>m.user);
+            membersWithRole = membersWithRole.concat(receivedMessage.guild.roles.get(getIdFromMention(rolesListed[i])).members.map(m=>m.user));
           }catch(error){
             console.error(error);
           }
@@ -102,9 +120,8 @@ function dmCommand(receivedMessage){
         //loops through membersWithRole and sends them a message, if blocked will send a message back in the channel saying who blocked the bot.
         for(var i = 0; membersWithRole.length > i; i++){
           let username = membersWithRole[i].username;
-
           
-          membersWithRole[i].send(messageArguments[3]).catch(error => {
+          membersWithRole[i].send(message).catch(error => {
             if(error.code === 50007){
               receivedMessage.channel.send(username + " has blocked the bot.");
             }
@@ -113,7 +130,7 @@ function dmCommand(receivedMessage){
         }
       }catch(e){
         console.error(e);
-        receivedMessage.channel.send("Somethings not right... make sure you used the correct command format! ``~dm | @role | message``");
+        receivedMessage.channel.send("Somethings not right... make sure you used the correct command format! ``~dm @role message``");
       }
     }
   }
